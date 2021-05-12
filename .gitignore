@@ -1,0 +1,16 @@
+homework1/picture
+homework3/__pycache__
+homework3/dataset/__pycache__
+homework3/model/__pycache__
+homework4/dataset/__pycache__
+homework4/model/__pycache__
+homework4/__pycache__
+homework5/dataset/__pycache__
+homework5/model/__pycache__
+homework5/__pycache__
+homework3/wandb
+homework3/artifacts
+homework4/wandb
+homework4/artifacts
+homework5/wandb
+homework5/artifacts
