@@ -199,8 +199,6 @@ class Trainer():
             wandb.log({"Train BLEU score": BLEU_score / (prediction.shape[0] * (i + 1))})
             wandb.log({"Test BLEU score": bleu_score})
 
-            print(test_predict)
-
             # store best model
             if(bleu_score > best_bleu):
                 best_bleu = bleu_score
@@ -239,7 +237,9 @@ class Trainer():
                 predict_list.append([predict, target, self.converter.tensor2word(input_word[0])])
 
             tbar.set_description('Test BLEU score: {0:.4f} '.format(BLEU_score/ (i + 1)))
-            
+        
+        print(predict_list)
+        
         return predict_list, BLEU_score / (i + 1)
 
     def Gaussian_score(self):
