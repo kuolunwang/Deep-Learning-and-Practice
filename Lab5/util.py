@@ -3,7 +3,7 @@
 def teacher_forcing_ratio(epoch, epochs):
     """
     epochs : totoal epochs
-    epochs : current epoch
+    epoch : current epoch
     """
 
     # from 1.0 to 0.0
@@ -14,7 +14,7 @@ def get_kld_weight(kl_cost_type, epochs, epoch, threshold):
     """
     kl_cost_type : 'monotonic' or 'cycle'
     epochs : totoal epochs
-    epochs : current epoch
+    epoch : current epoch
     threshold :
         montonic -> threshold for 0.0 to 1.0
         cycle -> each threshold repeat
