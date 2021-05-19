@@ -5,3 +5,5 @@ matplotlib==3.3.4
 tqdm==4.60.0
 wandb==0.10.29
 gym==0.18.0
+Box2D==2.3.10
+tensorboard=2.5.0
