@@ -195,6 +195,7 @@ def test(args, env, agent, writer):
                 writer.add_scalar('Test/Episode Reward', total_reward, n_episode)
                 print("total reward : {0:.2f}".format(total_reward))
                 rewards.append(total_reward)
+                break
 
     print('Average Reward', np.mean(rewards))
     env.close()
@@ -230,8 +231,8 @@ def main():
     writer = SummaryWriter(args.logdir)
     if not args.test_only:
         train(args, env, agent, writer)
-        agent.save(args.model)
-    agent.load(args.model)
+        agent.save(args.model,checkpoint=True)
+    agent.load(args.model,checkpoint=True)
     test(args, env, agent, writer)
 
 
