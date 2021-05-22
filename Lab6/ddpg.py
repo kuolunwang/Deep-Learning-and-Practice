@@ -108,12 +108,10 @@ class DDPG:
     def select_action(self, state, noise=True):
         '''based on the behavior (actor) network and exploration noise'''
         with torch.no_grad():
-            return (self._actor_net(torch.from_numpy(state).view(1, -1).to(self.device)) +\
-                   torch.from_numpy(self._action_noise.sample()).view(1, -1).to(self.device)).cpu().numpy().squeeze() \
-                   if noise else \
-                   self._actor_net(torch.from_numpy(state).view(1, -1).to(self.device)).cpu().numpy().squeeze()
-
-
+            action = self._actor_net(torch.from_numpy(state).view(1, -1).to(self.device)).cpu().numpy().squeeze()
+            if(noise):
+                action += self._action_noise.sample()       
+            return action
 
     def append(self, state, action, reward, next_state, done):
         self._memory.append(state, action, [reward / 100], next_state,
