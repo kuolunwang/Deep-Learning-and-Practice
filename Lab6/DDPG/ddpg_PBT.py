@@ -108,7 +108,7 @@ class DDPG:
 
         ## config ##
         self.device = args.device
-        self.batch_size = args.batch_size
+        self.batch_size = config['batch_size']
         self.tau = args.tau
         self.gamma = args.gamma
 
@@ -268,7 +268,7 @@ def test(args, env, agent, writer):
 
 def DDPG_BPT(config, args, env, checkpoint_dir=None):
 
-    agent = DQPG(args, config, checkpoint_dir)  
+    agent = DDPG(args, config, checkpoint_dir)  
     
     writer = SummaryWriter(args.logdir)
     train(args, env, agent, writer, config)
@@ -316,9 +316,9 @@ def main():
             time_attr="training_iteration",
             metric="reward_mean",
             mode="max",
-            perturbation_interval=50,
+            perturbation_interval=10,
             hyperparam_mutations={
-                "episode" : tune.choice([x for x in range(1000, 2001)])
+                "episode" : tune.choice([x for x in range(100, 201)])
             })
 
         analysis = tune.run(
