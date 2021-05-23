@@ -316,9 +316,9 @@ def main():
             time_attr="training_iteration",
             metric="reward_mean",
             mode="max",
-            perturbation_interval=10,
+            perturbation_interval=100,
             hyperparam_mutations={
-                "episode" : tune.choice([x for x in range(100, 201)])
+                "episode" : tune.choice([x for x in range(1000, 2001)])
             })
 
         analysis = tune.run(
