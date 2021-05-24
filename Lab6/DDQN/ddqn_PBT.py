@@ -178,7 +178,7 @@ def train(args, env, agent, writer, config):
                             epsilon))
                 break
 
-        if(((episode + 1) % 300 ) == 0) or ((episode + 1) == config["episode"]):
+        if(((episode + 1) % 100 ) == 0) or ((episode + 1) == config["episode"]):
             re_mean = test(args, env, agent, writer)
             tune.report(reward_mean=re_mean, )
             agent.save(episode)
@@ -198,7 +198,7 @@ def test(args, env, agent, writer):
         
         for t in itertools.count(start=1):
 
-            env.render()
+            # env.render()
 
             #select action
             action = agent.select_action(state, epsilon, action_space)
@@ -264,10 +264,10 @@ def main():
     else:
         # defined hyperparameter
         config = {
-            "hidden1" : tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
-            "hidden2" : tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
-            "lr" : tune.loguniform(1e-4, 1e-1),
-            "batch_size" : tune.sample_from(lambda _: 2 ** np.random.randint(1, 7)),
+            "hidden1" : tune.sample_from(lambda _: 2 ** np.random.randint(5, 9)),
+            "hidden2" : tune.sample_from(lambda _: 2 ** np.random.randint(5, 9)),
+            "lr" : tune.loguniform(1e-4, 5e-4),
+            "batch_size" : tune.sample_from(lambda _: 2 ** np.random.randint(4, 7)),
             "fre" : tune.choice([x for x in range(1,11)])
         }
 
@@ -277,7 +277,7 @@ def main():
             mode="max",
             perturbation_interval=100,
             hyperparam_mutations={
-                "episode" : tune.choice([x for x in range(1000, 2001)])
+                "episode" : tune.choice([x for x in range(2000, 3001)])
             })
 
         analysis = tune.run(
