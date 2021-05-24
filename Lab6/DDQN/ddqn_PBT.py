@@ -230,8 +230,8 @@ def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cuda')
-    parser.add_argument('-m', '--model', default='DDQN_PBT.pth')
-    parser.add_argument('--logdir', default='log/DDQN_PBT')
+    parser.add_argument('-m', '--model', default='ddqn_PBT.pth')
+    parser.add_argument('--logdir', default='log/ddqn_PBT')
     parser.add_argument('--name', default='ddqn_best_config')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
