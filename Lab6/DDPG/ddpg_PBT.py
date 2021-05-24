@@ -93,8 +93,8 @@ class DDPG:
         self._target_actor_net.load_state_dict(self._actor_net.state_dict())
         self._target_critic_net.load_state_dict(self._critic_net.state_dict())
         # optimizer
-        self._actor_opt = optim.Adam(self._actor_net.parameters(), lr=config["lra"])
-        self._critic_opt = optim.Adam(self._critic_net.parameters(), lr=config["lrc"])
+        self._actor_opt = optim.Adam(self._actor_net.parameters(), lr=config["lr"])
+        self._critic_opt = optim.Adam(self._critic_net.parameters(), lr=config["lr"])
 
         # action noise
         self._action_noise = GaussianNoise(dim=2)
@@ -191,7 +191,7 @@ class DDPG:
             ), self.checkpoint_dir)
 
     def load(self, path):
-        action, critic = torch.load(path)
+        actor, critic = torch.load(path)
         self._actor_net.load_state_dict(actor)
         self._critic_net.load_state_dict(critic)
 
@@ -229,7 +229,7 @@ def train(args, env, agent, writer, config):
                     .format(total_steps, episode, t, total_reward,
                             ewma_reward))
                 break
-        if(((episode + 1) % 300 ) == 0) or ((episode + 1) == config["episode"]):
+        if(((episode + 1) % 100 ) == 0) or ((episode + 1) == config["episode"]):
             re_mean = test(args, env, agent, writer)
             tune.report(reward_mean=re_mean, )
             agent.save(episode)
@@ -247,7 +247,7 @@ def test(args, env, agent, writer):
         
         for t in itertools.count(start=1):
 
-            env.render()
+            #env.render()
             # select action
             action = agent.select_action(state, noise=False)
             # execute action
@@ -277,8 +277,9 @@ def main():
     ## arguments ##
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-d', '--device', default='cuda')
-    parser.add_argument('-m', '--model', default='ddpg.pth')
+    parser.add_argument('-m', '--model', default='ddpg_PBT.pth')
     parser.add_argument('--logdir', default='log/ddpg')
+    parser.add_argument('--name', default='ddpg_best_config')
     # train
     parser.add_argument('--warmup', default=10000, type=int)
     # parser.add_argument('--episode', default=1200, type=int)
@@ -307,9 +308,8 @@ def main():
     else:
         # defined hyperparameter
         config = {
-            "lra" : tune.loguniform(1e-4, 1e-1),
-            "lrc" : tune.loguniform(1e-4, 1e-1),
-            "batch_size" : tune.sample_from(lambda _: 2 ** np.random.randint(1, 7)),
+            "lr" : tune.loguniform(1e-4, 1e-3),
+            "batch_size" : tune.sample_from(lambda _: 2 ** np.random.randint(4, 7)),
         }
 
         pbt = PopulationBasedTraining(
