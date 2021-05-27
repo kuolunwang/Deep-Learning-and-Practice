@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from .iCLEVR.iCLEVR import iCLEVRDataset
 from .CelebAHQ.CelebAHQ import CelebAHQDataset
 
