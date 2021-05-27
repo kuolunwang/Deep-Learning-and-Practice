@@ -16,3 +16,5 @@ Lab5/wandb
 Lab5/artifacts
 Lab7/__pycache__
 Lab7/dataset/__pycache__
+Lab7/dataset/iCLEVR/__pycache__
+Lab7/dataset/CelebAHQ/__pycache__
