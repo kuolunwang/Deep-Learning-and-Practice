@@ -36,10 +36,10 @@ def get_iCLEVR_data(root_folder, mode):
             label[i] = tmp
         return None, label
 
-
 class iCLEVRDataset(data.Dataset):
     def __init__(self, trans=None, cond=False, mode='train'):
         self.__downloaddata()
+        self.trans = self.__trans()
         self.mode = mode
         self.img_list, self.label_list = get_iCLEVR_data(self.root, mode)
         if self.mode == 'train':
@@ -47,23 +47,35 @@ class iCLEVRDataset(data.Dataset):
         
         self.cond = cond
         self.num_classes = 24
-        # print(self.img_list)
-        # print(self.label_list)
                 
     def __len__(self):
         """'return the size of dataset"""
-        return len(self.img_list)
+        return len(self.label_list)
 
     def __getitem__(self, index):
-        
-        # read rgb images
-        image = Image.open(os.path.join(self.root, "data", "images", self.img_list[index])).convert('RGB')
 
-        # convert images
-        # img = self.trans(rgb_image)
         label = self.label_list[index]
 
-        return image, label
+        if self.mode == "train":
+        
+            # read rgb images
+            image = Image.open(os.path.join(self.root, "data", "images", self.img_list[index])).convert('RGB')
+
+            # convert images
+            img = self.trans(image)
+
+            return img, torch.tensor(label)
+
+        return torch.tensor(label)
+
+    def __trans(self):
+        
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Resize((64,64)),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        return transform
 
     def __downloaddata(self):
 
@@ -81,5 +93,4 @@ class iCLEVRDataset(data.Dataset):
             zip1.close()
 
             os.remove(os.path.join(self.root, data_name + '.zip'))
-        
         
