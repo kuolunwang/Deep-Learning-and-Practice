@@ -18,16 +18,16 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         self.embedding =  nn.Sequential(
-            nn.Linear(n_class, n_class),
+            nn.Linear(n_class, n_class * 2),
             nn.LeakyReLU(0.2, inplace=True),
         )
 
         self.net = nn.Sequential(
-            nn.ConvTranspose2d(n_class + hidden_size, 64, kernel_size=4, stride=1, padding=0),
+            nn.ConvTranspose2d(n_class * 2 + hidden_size, 64, kernel_size=4, stride=1, padding=0),
             nn.LeakyReLU(0.2, inplace=True),
             *self.make_block(64,128),
-            *self.make_block(128,128),
-            *self.make_block(128,64),
+            *self.make_block(128,256),
+            *self.make_block(256,64),
             nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),
             nn.Tanh()
         )
@@ -41,7 +41,7 @@ class Generator(nn.Module):
         # transfer z -> batch_size * hidden_size * 1 * 1
         # transfer c -> batch_size * n_class * 1 * 1
         z = z.view(-1, hidden_size, 1, 1)
-        c = self.embedding(c).view(-1, n_class, 1, 1)
+        c = self.embedding(c).view(-1, n_class * 2, 1, 1)
 
         # concatenation z and c
         x = torch.cat((z, c), dim=1)
@@ -69,8 +69,8 @@ class Discriminator(nn.Module):
             nn.Conv2d(6, 64, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
             *self.make_block(64,128),
-            *self.make_block(128,128),
-            *self.make_block(128,64),
+            *self.make_block(128,256),
+            *self.make_block(256,64),
             nn.Conv2d(64, 1, kernel_size=4, stride=1, padding=0),
             nn.Sigmoid()
         )

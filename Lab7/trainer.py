@@ -156,17 +156,19 @@ class Trainer():
                 total_d += loss_d.item()
 
                 # train generator
-                self.optimizer_g.zero_grad()
+                for _ in range(5):
+                    self.optimizer_g.zero_grad()
 
-                z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
-                    else torch.randn(batch_size, self.args.hidden_size)
-                generated_img = self.generator(z, label)
-                predict = self.discriminator(generated_img, label)
-                loss_g = self.criterion(predict, real)
+                    z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
+                        else torch.randn(batch_size, self.args.hidden_size)
+                    generated_img = self.generator(z, label)
+                    predict = self.discriminator(generated_img, label)
+                    loss_g = self.criterion(predict, real)
 
-                # update
-                loss_g.backward()
-                self.optimizer_g.step()
+                    # update
+                    loss_g.backward()
+                    self.optimizer_g.step()
+
                 total_g += loss_g.item()
 
                 # show loss               
