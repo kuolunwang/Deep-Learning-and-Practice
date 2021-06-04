@@ -19,15 +19,16 @@ class Generator(nn.Module):
 
         self.embedding =  nn.Sequential(
             nn.Linear(n_class, n_class * 2),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.ReLU(),
         )
 
         self.net = nn.Sequential(
-            nn.ConvTranspose2d(n_class * 2 + hidden_size, 64, kernel_size=4, stride=1, padding=0),
-            nn.LeakyReLU(0.2, inplace=True),
-            *self.make_block(64,128),
-            *self.make_block(128,256),
-            *self.make_block(256,64),
+            nn.ConvTranspose2d(n_class * 2 + hidden_size, 512, kernel_size=4, stride=2, padding=0),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            *self.make_block(512, 256),
+            *self.make_block(256, 128),
+            *self.make_block(128, 64),
             nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),
             nn.Tanh()
         )
@@ -53,7 +54,7 @@ class Generator(nn.Module):
     def make_block(self, input, output):
         block = [nn.ConvTranspose2d(input, output, kernel_size=4, stride=2, padding=1)]
         block.append(nn.BatchNorm2d(output))
-        block.append(nn.LeakyReLU(0.2, inplace=True))
+        block.append(nn.ReLU())
         return block
 
 class Discriminator(nn.Module):
@@ -62,16 +63,15 @@ class Discriminator(nn.Module):
 
         self.embedding = nn.Sequential(
             nn.Linear(n_class, int(np.prod(img_size))),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.LeakyReLU()
         )
 
         self.net = nn.Sequential(
-            nn.Conv2d(6, 64, kernel_size=4, stride=2, padding=1),
-            nn.LeakyReLU(0.2, inplace=True),
+            *self.make_block(6, 64),
             *self.make_block(64,128),
             *self.make_block(128,256),
-            *self.make_block(256,64),
-            nn.Conv2d(64, 1, kernel_size=4, stride=1, padding=0),
+            *self.make_block(256,512),
+            nn.Conv2d(512, 1, kernel_size=4, stride=1, padding=0),
             nn.Sigmoid()
         )
 
@@ -93,6 +93,6 @@ class Discriminator(nn.Module):
     def make_block(self, input, output):
         block = [nn.Conv2d(input, output, kernel_size=4, stride=2, padding=1)]
         block.append(nn.BatchNorm2d(output))
-        block.append(nn.LeakyReLU(0.2, inplace=True))
+        block.append(nn.LeakyReLU())
         return block
 

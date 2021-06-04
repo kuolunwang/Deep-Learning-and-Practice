@@ -110,6 +110,9 @@ class Trainer():
         # wandb.watch(self.generator)
         # wandb.watch(self.discriminator)
 
+        z_fixed = torch.randn(32, self.args.hidden_size).cuda() if self.args.cuda \
+            else torch.randn(32, self.args.hidden_size)
+
         for e in range(1, self.args.epochs + 1):
 
             total_g = 0.0
@@ -156,7 +159,7 @@ class Trainer():
                 total_d += loss_d.item()
 
                 # train generator
-                for _ in range(5):
+                for _ in range(4):
                     self.optimizer_g.zero_grad()
 
                     z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
@@ -176,7 +179,7 @@ class Trainer():
                     .format(loss_g / (i + 1), loss_d / (i + 1)))
 
             # evaluate
-            score = self.evaluate(e)
+            score = self.evaluate(e, z_fixed)
 
             # record
             wandb.log({"score": score})
@@ -200,10 +203,11 @@ class Trainer():
         self.run.join()
 
     # evaluation
-    def evaluate(self, e):
+    def evaluate(self, e, z):
 
         tbar = tqdm(self.testloader)
         self.generator.eval()
+        self.discriminator.eval()
         eval_model = evaluation_model()
 
         score = 0.0
@@ -212,9 +216,6 @@ class Trainer():
             label = Variable(label)
 
             batch_size = label.shape[0]
-
-            z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
-                else torch.randn(batch_size, self.args.hidden_size)
                             
             # using cuda
             if self.args.cuda:
