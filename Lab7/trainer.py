@@ -149,7 +149,7 @@ class Trainer():
                 z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
                     else torch.randn(batch_size, self.args.hidden_size)
                 generated_img = self.generator(z, label)
-                predict = self.discriminator(generated_img, label)
+                predict = self.discriminator(generated_img.detach(), label)
                 loss_fake = self.criterion(predict, fake)
 
                 # update 
@@ -238,3 +238,4 @@ class Trainer():
 
         grid = make_grid(img, nrow=8, normalize=True)
         save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_{0}_result.png".format(e)))
+        wandb.log({"generated_picture": wandb.Image(os.path.join(self.img_path, self.file_name + "_{0}_result.png".format(e)))})
