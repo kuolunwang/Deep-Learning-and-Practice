@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image, make_grid
 
 from dataset import get_dataset
-from model.CGAN import Generator, Discriminator, weights_init
+from model.CGAN import Generator, Discriminator
 from dataset.iCLEVR.evaluator import evaluation_model
 
 class Trainer():
@@ -62,8 +62,8 @@ class Trainer():
         self.discriminator = Discriminator(n_class, img_size)
 
         # init weight
-        self.generator.apply(weights_init)
-        self.discriminator.apply(weights_init)
+        self.generator.weight_init(0, 0.02)
+        self.discriminator.weight_init(0, 0.02)
 
         # show model parameter
         print(self.generator)
@@ -149,7 +149,7 @@ class Trainer():
                 z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
                     else torch.randn(batch_size, self.args.hidden_size)
                 generated_img = self.generator(z, label)
-                predict = self.discriminator(generated_img.detach(), label)
+                predict = self.discriminator(generated_img, label)
                 loss_fake = self.criterion(predict, fake)
 
                 # update 
@@ -176,15 +176,15 @@ class Trainer():
 
                 # show loss               
                 tbar.set_description('Generator loss: {0:.4f}, Discriminator loss: {1:.4f}' \
-                    .format(loss_g / (i + 1), loss_d / (i + 1)))
+                    .format(total_g / (i + 1), total_d / (i + 1)))
 
             # evaluate
             score = self.evaluate(e, z_fixed)
 
             # record
             wandb.log({"score": score})
-            wandb.log({"Generator loss": loss_g / (i + 1)})
-            wandb.log({"Discriminator loss": loss_d / (i + 1)})
+            wandb.log({"Generator loss": total_g / (i + 1)})
+            wandb.log({"Discriminator loss": total_d / (i + 1)})
 
             # store best model
             if(score > best_score):

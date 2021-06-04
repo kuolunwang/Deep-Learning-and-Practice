@@ -5,25 +5,18 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
 
 class Generator(nn.Module):
     def __init__(self, hidden_size, n_class):
         super(Generator, self).__init__()
 
         self.embedding =  nn.Sequential(
-            nn.Linear(n_class, n_class * 2),
+            nn.Linear(n_class, 100),
             nn.ReLU(),
         )
 
         self.net = nn.Sequential(
-            nn.ConvTranspose2d(n_class * 2 + hidden_size, 512, kernel_size=4, stride=2, padding=0),
+            nn.ConvTranspose2d(100 + hidden_size, 512, kernel_size=4, stride=2, padding=0),
             nn.BatchNorm2d(512),
             nn.ReLU(),
             *self.make_block(512, 256),
@@ -42,7 +35,7 @@ class Generator(nn.Module):
         # transfer z -> batch_size * hidden_size * 1 * 1
         # transfer c -> batch_size * n_class * 1 * 1
         z = z.view(-1, hidden_size, 1, 1)
-        c = self.embedding(c).view(-1, n_class * 2, 1, 1)
+        c = self.embedding(c).view(-1, 100, 1, 1)
 
         # concatenation z and c
         x = torch.cat((z, c), dim=1)
@@ -57,17 +50,24 @@ class Generator(nn.Module):
         block.append(nn.ReLU())
         return block
 
+    def weight_init(self, mean, std):
+        for m in self._modules:
+            if isinstance(self._modules[m], nn.ConvTranspose2d) or isinstance(self._modules[m], nn.Conv2d):
+                self._modules[m].weight.data.normal_(mean, std)
+                self._modules[m].bias.data.zero_()
+
+
 class Discriminator(nn.Module):
     def __init__(self, n_class, img_size):
         super(Discriminator, self).__init__()
 
         self.embedding = nn.Sequential(
-            nn.Linear(n_class, int(np.prod(img_size))),
+            nn.Linear(n_class, int(np.prod(img_size) / 3)),
             nn.LeakyReLU()
         )
 
         self.net = nn.Sequential(
-            *self.make_block(6, 64),
+            *self.make_block(4, 64),
             *self.make_block(64,128),
             *self.make_block(128,256),
             *self.make_block(256,512),
@@ -80,8 +80,8 @@ class Discriminator(nn.Module):
         # c -> batch_size * n_class
         _, ch, w, h = x.shape
 
-        # transfer c -> batch_size * 3 * 64 * 64
-        c = self.embedding(c).view(-1, ch, w, h)
+        # transfer c -> batch_size * 1 * 64 * 64
+        c = self.embedding(c).view(-1, 1, w, h)
 
         # concatenation x and c
         x = torch.cat((x, c), dim=1)
@@ -96,3 +96,8 @@ class Discriminator(nn.Module):
         block.append(nn.LeakyReLU())
         return block
 
+    def weight_init(self, mean, std):
+        for m in self._modules:
+            if isinstance(self._modules[m], nn.ConvTranspose2d) or isinstance(self._modules[m], nn.Conv2d):
+                self._modules[m].weight.data.normal_(mean, std)
+                self._modules[m].bias.data.zero_()
