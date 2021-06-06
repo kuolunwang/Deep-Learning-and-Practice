@@ -21,6 +21,6 @@ Lab7/dataset/CelebAHQ/__pycache__
 Lab7/wandb
 Lab7/weight
 Lab7/predict_result
-Lab7/model/__pycache__/CGAN.cpython-36.pyc
+Lab7/model/__pycache__
 Lab7/dataset/CelebAHQ/data/
 Lab7/dataset/iCLEVR/data/

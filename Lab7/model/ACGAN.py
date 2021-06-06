@@ -58,8 +58,13 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, n_class):
+    def __init__(self, n_class, img_size):
         super(Discriminator, self).__init__()
+
+        self.embedding = nn.Sequential(
+            nn.Linear(n_class, int(np.prod(img_size) / 3)),
+            nn.LeakyReLU()
+        )
 
         self.net = nn.Sequential(
             *self.make_block(4, 64),
@@ -74,12 +79,20 @@ class Discriminator(nn.Module):
         )
         
         self.aux = nn.Sequential(
-            nn.Linear(512, n_class),
-            nn.Softmax()
+            nn.Linear(512*4*4, n_class),
+            nn.Sigmoid()
         )
 
-    def forward(self, x):
+    def forward(self, x, c):
         # x -> batch_size * 3 * 64 * 64
+        # c -> batch_size * n_class
+        _, ch, w, h = x.shape
+
+        # transfer c -> batch_size * 1 * 64 * 64
+        c = self.embedding(c).view(-1, 1, w, h)
+
+        # concatenation x and c
+        x = torch.cat((x, c), dim=1)
 
         # output -> batch_size * 512 * 1 * 1
         output = self.net(x)

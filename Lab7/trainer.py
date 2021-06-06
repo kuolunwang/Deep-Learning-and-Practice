@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image, make_grid
 
 from dataset import get_dataset
-from model.CGAN import Generator, Discriminator
+from model.ACGAN import Generator, Discriminator
 from dataset.iCLEVR.evaluator import evaluation_model
 
 class Trainer():
@@ -55,11 +55,11 @@ class Trainer():
 
         # pararmeter
         n_class = 24
-        # img_size = (3,64,64)
+        img_size = (3,64,64)
 
         # model 
         self.generator = Generator(args.hidden_size, n_class)
-        self.discriminator = Discriminator(n_class)
+        self.discriminator = Discriminator(n_class, img_size)
 
         # init weight
         self.generator.weight_init(0, 0.02)
@@ -77,7 +77,7 @@ class Trainer():
 
         # criterion
         self.dis_criterion = nn.BCELoss()
-        self.aux_criterion = nn.CrossEntropyLoss()
+        self.aux_criterion = nn.BCELoss()
 
         # using cuda
         if args.cuda: 
@@ -144,7 +144,7 @@ class Trainer():
                 label = label.float()
 
                 # for real
-                classes, predict = self.discriminator(img)
+                classes, predict = self.discriminator(img, label)
                 loss_real = self.dis_criterion(predict, real)
                 loss_real_class = self.aux_criterion(classes, label)
                 
@@ -152,7 +152,7 @@ class Trainer():
                 z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
                     else torch.randn(batch_size, self.args.hidden_size)
                 generated_img = self.generator(z, label)
-                classes, predict = self.discriminator(generated_img.detach())
+                classes, predict = self.discriminator(generated_img.detach(), label)
                 loss_fake = self.dis_criterion(predict, fake)
                 loss_fake_class = self.aux_criterion(classes, label)
 
@@ -169,7 +169,7 @@ class Trainer():
                     z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
                         else torch.randn(batch_size, self.args.hidden_size)
                     generated_img = self.generator(z, label)
-                    classes, predict = self.discriminator(generated_img)
+                    classes, predict = self.discriminator(generated_img, label)
                     loss_dis = self.dis_criterion(predict, real)
                     loss_aux = self.aux_criterion(classes, label)
 
