@@ -55,11 +55,11 @@ class Trainer():
 
         # pararmeter
         n_class = 24
-        img_size = (3,64,64)
+        # img_size = (3,64,64)
 
         # model 
         self.generator = Generator(args.hidden_size, n_class)
-        self.discriminator = Discriminator(n_class, img_size)
+        self.discriminator = Discriminator(n_class)
 
         # init weight
         self.generator.weight_init(0, 0.02)
@@ -76,16 +76,21 @@ class Trainer():
         self.optimizer_d = torch.optim.Adam(self.discriminator.parameters(), lr=args.learning_rate, betas=(0.5,0.99))
 
         # criterion
-        self.criterion = nn.BCELoss()
+        self.dis_criterion = nn.BCELoss()
+        self.aux_criterion = nn.CrossEntropyLoss()
 
         # using cuda
         if args.cuda: 
             self.generator = self.generator.cuda()
             self.discriminator = self.discriminator.cuda()
-            self.criterion = self.criterion.cuda()
+            self.dis_criterion = self.dis_criterion.cuda()
+            self.aux_criterion = self.aux_criterion.cuda()
             print("using cuda")
 
         self.device = torch.device("cuda" if args.cuda else "cpu")
+
+        self.z_fixed = torch.randn(32, self.args.hidden_size).cuda() if self.args.cuda \
+            else torch.randn(32, self.args.hidden_size)
             
         # load model if need 
         if(args.load_model != None):
@@ -98,7 +103,7 @@ class Trainer():
                 elif "discriminator" in f:
                     self.discriminator.load_state_dict(torch.load(os.path.join(artifact_dir, f)))
 
-        self.evaluate() if args.test else self.training()
+        self.evaluate(0) if args.test else self.training()
 
     # training
     def training(self):
@@ -109,9 +114,6 @@ class Trainer():
 
         # wandb.watch(self.generator)
         # wandb.watch(self.discriminator)
-
-        z_fixed = torch.randn(32, self.args.hidden_size).cuda() if self.args.cuda \
-            else torch.randn(32, self.args.hidden_size)
 
         for e in range(1, self.args.epochs + 1):
 
@@ -142,31 +144,36 @@ class Trainer():
                 label = label.float()
 
                 # for real
-                predict = self.discriminator(img, label)
-                loss_real = self.criterion(predict, real)
+                classes, predict = self.discriminator(img)
+                loss_real = self.dis_criterion(predict, real)
+                loss_real_class = self.aux_criterion(classes, label)
                 
                 # for fake
                 z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
                     else torch.randn(batch_size, self.args.hidden_size)
                 generated_img = self.generator(z, label)
-                predict = self.discriminator(generated_img.detach(), label)
-                loss_fake = self.criterion(predict, fake)
+                classes, predict = self.discriminator(generated_img.detach())
+                loss_fake = self.dis_criterion(predict, fake)
+                loss_fake_class = self.aux_criterion(classes, label)
 
                 # update 
-                loss_d = loss_fake + loss_real
+                loss_d = loss_fake + loss_real + loss_real_class + loss_fake_class
                 loss_d.backward()
                 self.optimizer_d.step()
                 total_d += loss_d.item()
 
                 # train generator
-                for _ in range(4):
+                for _ in range(5):
                     self.optimizer_g.zero_grad()
 
                     z = torch.randn(batch_size, self.args.hidden_size).cuda() if self.args.cuda \
                         else torch.randn(batch_size, self.args.hidden_size)
                     generated_img = self.generator(z, label)
-                    predict = self.discriminator(generated_img, label)
-                    loss_g = self.criterion(predict, real)
+                    classes, predict = self.discriminator(generated_img)
+                    loss_dis = self.dis_criterion(predict, real)
+                    loss_aux = self.aux_criterion(classes, label)
+
+                    loss_g = loss_dis + loss_aux
 
                     # update
                     loss_g.backward()
@@ -179,7 +186,7 @@ class Trainer():
                     .format(total_g / (i + 1), total_d / (i + 1)))
 
             # evaluate
-            score = self.evaluate(e, z_fixed)
+            score = self.evaluate(e)
 
             # record
             wandb.log({"score": score})
@@ -203,7 +210,7 @@ class Trainer():
         self.run.join()
 
     # evaluation
-    def evaluate(self, e, z):
+    def evaluate(self, e):
 
         tbar = tqdm(self.testloader)
         self.generator.eval()
@@ -225,7 +232,7 @@ class Trainer():
                 
             with torch.no_grad():
 
-                generated_img = self.generator(z, label)
+                generated_img = self.generator(self.z_fixed, label)
                 
             score += eval_model.eval(generated_img, label)
             tbar.set_description('Score: {0:.4f} '.format(score / (i + 1)))
