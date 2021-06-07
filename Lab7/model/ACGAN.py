@@ -11,12 +11,12 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         self.embedding =  nn.Sequential(
-            nn.Linear(n_class, 100),
+            nn.Linear(n_class, 200),
             nn.ReLU(),
         )
 
         self.net = nn.Sequential(
-            nn.ConvTranspose2d(100 + hidden_size, 512, kernel_size=4, stride=2, padding=0),
+            nn.ConvTranspose2d(200 + hidden_size, 512, kernel_size=4, stride=2, padding=0),
             nn.BatchNorm2d(512),
             nn.ReLU(),
             *self.make_block(512, 256),
@@ -35,7 +35,7 @@ class Generator(nn.Module):
         # transfer z -> batch_size * hidden_size * 1 * 1
         # transfer c -> batch_size * n_class * 1 * 1
         z = z.view(-1, hidden_size, 1, 1)
-        c = self.embedding(c).view(-1, 100, 1, 1)
+        c = self.embedding(c).view(-1, 200, 1, 1)
 
         # concatenation z and c
         x = torch.cat((z, c), dim=1)
