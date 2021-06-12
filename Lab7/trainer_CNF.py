@@ -206,8 +206,10 @@ class Trainer():
 
     def stored_image(self, img, path, e, dataset):
 
-        text = "_new_test" if dataset == self.new_testloader else "_test"
         grid = make_grid(img, nrow=8, normalize=True)
-        save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + text + "_{0}_result.png".format(e)))
-        wandb.log({"generated picture for test": wandb.Image(os.path.join(self.img_path, self.file_name + text + "_{0}_result.png".format(e)))})
-        wandb.log({"generated picture for new test": wandb.Image(os.path.join(self.img_path, self.file_name + text + "_{0}_result.png".format(e)))})
+        if dataset == self.testloader:
+            save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_test" + "_{0}_result.png".format(e)))
+            wandb.log({"generated picture for test": wandb.Image(os.path.join(self.img_path, self.file_name + "_test" + "_{0}_result.png".format(e)))})
+        elif dataset == self.new_testloader:
+            save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_new_test" + "_{0}_result.png".format(e)))
+            wandb.log({"generated picture for new test": wandb.Image(os.path.join(self.img_path, self.file_name + "_new_test" + "_{0}_result.png".format(e)))})
