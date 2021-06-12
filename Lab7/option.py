@@ -16,7 +16,8 @@ class Option():
 
         # save name and load model path
         parser.add_argument("--save_folder", type=str, default=os.getcwd(), help="save model in save folder, default is current path")
-        parser.add_argument("--load_model",  type=str, default=None, help="load model from wandb, ex. 'kuolunwang/DLP_homework5/model:v0', default is None")
+        parser.add_argument("--load_model",  type=str, default=None, help="load model from wandb, ex. 'kuolunwang/DLP_homework7/model:v0', default is None")
+        parser.add_argument("--dataset",  type=str, default="test", help="evaluate dataset(new_test and test), default is test.json")
         parser.add_argument("--test", action="store_true", default=False, help="True is test model, False is keep train, default is False")
 
         # cuda

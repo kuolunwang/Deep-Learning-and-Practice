@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image, make_grid
 
 from dataset import get_dataset
-from model.ACGAN import Generator, Discriminator
+from model import Generator, Discriminator
 from dataset.iCLEVR.evaluator import evaluation_model
 
 class Trainer():
@@ -30,12 +30,11 @@ class Trainer():
         config.hidden_size = args.hidden_size
 
         # data
-        trainset = get_dataset("iCLEVR", "train")
-        testset = get_dataset("iCLEVR", "test")
+        trainset = get_dataset("iCLEVR", "train", "CGAN")
+        testset = get_dataset("iCLEVR", args.dataset, "CGAN")
         
         # file name 
-        self.file_name ="Lab7_batch{0}_epochs{1}_learning rate{2}" \
-            .format(args.batch_size, args.epochs, args.learning_rate)
+        self.file_name ="Lab7_CGAN"
 
         #crate folder
         self.weight_path = os.path.join(args.save_folder,"weight")
@@ -157,7 +156,7 @@ class Trainer():
                 loss_fake_class = self.aux_criterion(classes, label)
 
                 # update 
-                loss_d = loss_fake + loss_real + loss_real_class + loss_fake_class
+                loss_d = loss_fake + loss_real + loss_real_class * 3 + loss_fake_class * 3
                 loss_d.backward()
                 self.optimizer_d.step()
                 total_d += loss_d.item()
