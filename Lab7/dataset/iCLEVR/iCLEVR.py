@@ -40,7 +40,7 @@ def get_iCLEVR_data(root_folder, mode):
         return None, label
 
 class iCLEVRDataset(data.Dataset):
-    def __init__(self, trans=None, cond=False, mode='train', model="CGAN"):
+    def __init__(self, trans=None, mode='train', model="CGAN"):
         self.__downloaddata()
         self.model = model
         self.trans = self.__trans()
@@ -49,7 +49,6 @@ class iCLEVRDataset(data.Dataset):
         if self.mode == 'train':
             print("> Found %d images..." % (len(self.img_list)))
         
-        self.cond = cond
         self.num_classes = 24
                 
     def __len__(self):
@@ -85,6 +84,8 @@ class iCLEVRDataset(data.Dataset):
                 transforms.ToTensor(),
                 transforms.Resize((64,64)),
             ])
+        else:
+            return None
 
         return transform
 

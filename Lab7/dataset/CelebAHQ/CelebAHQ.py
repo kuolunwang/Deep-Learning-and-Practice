@@ -26,9 +26,9 @@ def get_CelebA_data(root_folder):
     return img_list, label_list
 
 class CelebAHQDataset(data.Dataset):
-    def __init__(self, trans=None, cond=False):
+    def __init__(self, mode=None):
         self.__downloaddata()
-        self.cond = cond
+        self.trans = self.__trans()
         self.img_list, self.label_list = get_CelebA_data(self.root)
         self.num_classes = 40
         print("> Found %d images..." % (len(self.img_list)))
@@ -43,10 +43,20 @@ class CelebAHQDataset(data.Dataset):
         image = Image.open(os.path.join(self.root, "data", "images", self.img_list[index])).convert('RGB')
 
         # convert images
-        # img = self.trans(rgb_image)
+        img = self.trans(image)
+
         label = self.label_list[index]
 
-        return image, label
+        return img, torch.tensor(label)
+
+    def __trans(self):
+
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Resize((64,64))
+        ])
+
+        return transform
 
     def __downloaddata(self):
 

@@ -22,7 +22,7 @@ class Trainer():
         self.args = args
 
         # wandb
-        self.run = wandb.init(project="CNF", entity="kuolunwang")
+        self.run = wandb.init(project="CNF", entity="kuolunwang") if args.dataset == "iCLEVR" else wandb.init(project="CNF_face", entity="kuolunwang")
         config = wandb.config
 
         config.learning_rate = args.learning_rate
@@ -33,9 +33,12 @@ class Trainer():
         config.step = args.num_steps
 
         # data
-        trainset = get_dataset("iCLEVR", "train", "CNF")
-        testset = get_dataset("iCLEVR", "test", "CNF")
-        new_testset = get_dataset("iCLEVR", "new_test", "CNF")
+        if args.dataset == "iCLEVR":
+            trainset = get_dataset(args.dataset, "train", "CNF")
+            testset = get_dataset(args.dataset, "test", "CNF")
+            new_testset = get_dataset(args.dataset, "new_test", "CNF")
+        elif args.dataset == "CelebAHQ":
+            trainset = get_dataset(args.dataset, "train")
         
         # file name 
         self.file_name ="Lab7_CNF"
@@ -51,21 +54,26 @@ class Trainer():
             os.makedirs(self.img_path)
             
         # dataloader
-        self.trainloader = DataLoader(dataset=trainset, batch_size=args.batch_size, 
-        shuffle=True, num_workers=4)
-        self.testloader = DataLoader(dataset=testset, batch_size=32, 
-        shuffle=False, num_workers=4)
-        self.new_testloader = DataLoader(dataset=new_testset, batch_size=32, 
-        shuffle=False, num_workers=4)
+        if args.dataset == "iCLEVR":
+            self.trainloader = DataLoader(dataset=trainset, batch_size=args.batch_size, 
+            shuffle=True, num_workers=4)
+            self.testloader = DataLoader(dataset=testset, batch_size=32, 
+            shuffle=False, num_workers=4)
+            self.new_testloader = DataLoader(dataset=new_testset, batch_size=32, 
+            shuffle=False, num_workers=4)
+            classes = 24
+        elif args.dataset == "CelebAHQ":
+            self.trainloader = DataLoader(dataset=trainset, batch_size=args.batch_size, 
+            shuffle=True, num_workers=4)
+            classes = 40
 
         # model 
         self.glow = Glow(num_channels=args.num_channels,
                         num_levels=args.num_levels,
                         num_steps=args.num_steps,
-                        n_class=24,
+                        n_class=classes,
                         img_size=(3,64,64),
                         mode="sketch")
-
 
         # show model parameter
         print(self.glow)
@@ -95,16 +103,19 @@ class Trainer():
             artifact_dir = artifact.download()
             files = os.listdir(artifact_dir)
             for f in files:
-                if args.dataset in f:
+                if args.testset in f:
                     self.glow.load_state_dict(torch.load(os.path.join(artifact_dir, f)))
 
         if args.test:
-            if args.dataset == "test":
+            if args.testset == "test":
                 self.evaluate(self.testloader, 0)
-            elif args.dataset == "new":
+            elif args.testset == "new":
                 self.evaluate(self.new_testloader, 0)
         else:
-            self.training()
+            if args.dataset == "iCLEVR":
+                self.training()
+            elif args.dataset == "CelebAHQ":
+                self.generator()
 
     # training
     def training(self):
@@ -204,6 +215,7 @@ class Trainer():
 
         return score
 
+    # save generated images
     def stored_image(self, img, path, e, dataset):
 
         grid = make_grid(img, nrow=8, normalize=True)
@@ -213,3 +225,58 @@ class Trainer():
         elif dataset == self.new_testloader:
             save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_new_test" + "_{0}_result.png".format(e)))
             wandb.log({"generated picture for new test": wandb.Image(os.path.join(self.img_path, self.file_name + "_new_test" + "_{0}_result.png".format(e)))})
+
+    # train generator for task2
+    def generator(self):
+
+        best_weight = None
+        best_loss = 10000
+
+        for e in range(1, self.args.epochs + 1):
+
+            tbar = tqdm(self.trainloader)
+            self.glow.train()
+            loss_meter = util.AverageMeter()
+
+            for i, (img, label) in enumerate(tbar):
+
+                # img (batch * 3 * 64 * 64) and label (batch_size * 24)
+                img, label = Variable(img),Variable(label)
+
+                # using cuda
+                if self.args.cuda:
+                    img, label = img.cuda(), label.cuda()
+
+                label = label.float()
+
+                self.optimizer.zero_grad()
+
+                z, sldj = self.glow(img, label, reverse=False)
+                loss = self.criterion(z, sldj)
+                loss_meter.update(loss.item(), img.size(0))
+                loss.backward()
+                if self.max_grad_norm > 0:
+                    util.clip_grad_norm(self.optimizer, self.max_grad_norm)
+                self.optimizer.step()
+            
+                # show loss               
+                tbar.set_postfix(nll=loss_meter.avg,
+                                     bpd=util.bits_per_dim(img, loss_meter.avg),
+                                     lr=self.optimizer.param_groups[0]['lr'])
+                tbar.update(img.size(0))
+
+            # record
+            wandb.log({"total loss": loss_meter.avg})
+
+            # store best model
+            if(best_loss > loss_meter.avg):
+                best_loss = loss_meter.avg
+                best_weight = copy.deepcopy(self.glow.state_dict())
+
+        # save the best model 
+        torch.save(best_weight, os.path.join(self.weight_path, self.file_name + 'CNF_face' + '.pkl'))
+
+        artifact = wandb.Artifact('model', type='model')
+        artifact.add_file(os.path.join(self.weight_path, self.file_name + 'CNF_face' + '.pkl'))
+        self.run.log_artifact(artifact)
+        self.run.join()
