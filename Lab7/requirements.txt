@@ -3,5 +3,5 @@ torchvision==0.9.1
 torchaudio==0.8.1
 matplotlib==3.3.4
 tqdm==4.60.0
-wandb==0.10.29
+wandb==0.10.32
 gdown==3.12.2
