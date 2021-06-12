@@ -25,7 +25,10 @@ def get_iCLEVR_data(root_folder, mode):
             label[i] = tmp
         return np.squeeze(img), np.squeeze(label)
     else:
-        data = json.load(open(os.path.join(root_folder,'test.json')))
+        if mode == "test":
+            data = json.load(open(os.path.join(root_folder,'test.json')))
+        elif mode == "new_test":
+            data = json.load(open(os.path.join(root_folder,'new_test.json')))
         obj = json.load(open(os.path.join(root_folder,'objects.json')))
         label = data
         for i in range(len(label)):
@@ -37,8 +40,9 @@ def get_iCLEVR_data(root_folder, mode):
         return None, label
 
 class iCLEVRDataset(data.Dataset):
-    def __init__(self, trans=None, cond=False, mode='train'):
+    def __init__(self, trans=None, cond=False, mode='train', model="CGAN"):
         self.__downloaddata()
+        self.model = model
         self.trans = self.__trans()
         self.mode = mode
         self.img_list, self.label_list = get_iCLEVR_data(self.root, mode)
@@ -69,12 +73,19 @@ class iCLEVRDataset(data.Dataset):
         return torch.tensor(label)
 
     def __trans(self):
-        
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Resize((64,64)),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
-        ])
+
+        if self.model == "CGAN":
+            transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((64,64)),
+                transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
+            ])
+        elif self.model == "CNF":
+                transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((64,64)),
+            ])
+
         return transform
 
     def __downloaddata(self):

@@ -3,9 +3,9 @@
 from .iCLEVR.iCLEVR import iCLEVRDataset
 from .CelebAHQ.CelebAHQ import CelebAHQDataset
 
-def get_dataset(name, mode):
+def get_dataset(name, mode, model=None):
     dataset = {
-        'iCLEVR' : iCLEVRDataset(mode=mode),
+        'iCLEVR' : iCLEVRDataset(mode=mode, model=model),
         'CelebAHQ' : CelebAHQDataset()
     }
 
