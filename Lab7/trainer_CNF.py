@@ -121,6 +121,8 @@ class Trainer():
                     self.face_generation()
                 if args.task == 2:
                     self.interpolation()
+                if args.task == 3:
+                    self.manipulation()
         else:
             if args.dataset == "iCLEVR":
                 self.training()
@@ -295,17 +297,12 @@ class Trainer():
 
         self.glow.eval()
 
-        # sample from training dataset 
-        # sample = next(iter(self.trainloader))
-        # _, label = sample
-
-        z = torch.randn(16, 3, 64, 64).cuda() if self.args.cuda \
-            else torch.randn(16, 3, 64, 64)
+        z = torch.randn(5, 3, 64, 64).cuda() if self.args.cuda \
+            else torch.randn(5, 3, 64, 64)
 
         # calculate condition
-        for i in range(16):
-            # label[:,i] *= -1 if random.random() < 0.1 else 1
-            cond = torch.tensor([1 if random.random() < 0.35 else -1 for _ in range(40)]).view(1, -1)
+        for i in range(5):
+            cond = torch.tensor([1 if random.random() < 0.2 else -1 for _ in range(40)]).view(1, -1)
             label = cond if i == 0 else torch.cat((label, cond), dim=0)
 
         label = Variable(label)
@@ -363,6 +360,50 @@ class Trainer():
 
     def manipulation(self):
 
+        # sample from training dataset 
+        sample = next(iter(self.trainloader))
+        img, con = sample
 
+        img, con = Variable(img), Variable(con)
+                            
+        # using cuda
+        if self.args.cuda:
+            img = img.cuda()
+            con = con.cuda()
+
+        # select attribute (smiling)
+        # att = random.randint(0,40)
+        att = 31
+        
+        with torch.no_grad():
+
+            z, _ = self.glow(img, con.float(), reverse=False)
+
+            a_with = con[1:,att] == 1
+            a_without = con[1:,att] == -1
+            index_w, index_wo = torch.nonzero(a_with).view(-1), torch.nonzero(a_without).view(-1)
+
+            z_w, z_wo = z[index_w], z[index_wo]
+            z_diff = z_w.mean(0) - z_wo.mean(0)
+            
+            for i in range(5):
+                
+                alpha = (1.0 / 4) * i
+                if con[0, att] == 1:
+                    z_c = z[0] - alpha * z_diff
+                else:
+                    z_c = z[0] + alpha * z_diff
+                z_c = z_c.view(1, 3, 64, 64)
+                if i == 0:
+                    generated_img, _ = self.glow(z_c, con[0].float(), reverse=True) 
+                else: 
+                    g, _ = self.glow(z_c, con[0].float(), reverse=True) 
+                    generated_img = torch.cat((generated_img, g), dim=0)
+
+            generated_img = torch.tanh(generated_img)
+
+        grid = make_grid(generated_img, nrow=8, normalize=True)
+        save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_mainpulation_result.png"))
+        wandb.log({"generated picture for mainpulation": wandb.Image(os.path.join(self.img_path, self.file_name + "_mainpulation_result.png"))})
 
 
