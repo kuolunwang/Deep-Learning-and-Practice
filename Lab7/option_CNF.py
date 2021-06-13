@@ -22,8 +22,9 @@ class Option():
         # save name and load model path
         parser.add_argument("--save_folder", type=str, default=os.getcwd(), help="save model in save folder, default is current path")
         parser.add_argument("--load_model",  type=str, default=None, help="load model from wandb, ex. 'kuolunwang/CNF/model:v0', default is None")
-        parser.add_argument("--testset",  type=str, default="test", help="evaluate test dataset(new and test), default is test.json")
+        parser.add_argument("--testset",  type=str, default=None, help="evaluate test dataset(new and test), default is None")
         parser.add_argument("--dataset",  type=str, default="iCLEVR", help="This lab have two dataset, iCLEVR and CelebAHQ, default is iCLEVR")
+        parser.add_argument("--task",  type=int, default=1, help="The task divide into three parts, face generation(1), linear interpolation(2) and attribute manipulation(3), default is 1")
         parser.add_argument("--test", action="store_true", default=False, help="True is test model, False is keep train, default is False")
 
 

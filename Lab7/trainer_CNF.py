@@ -5,6 +5,7 @@ from tqdm import tqdm
 import os
 import copy
 import wandb
+import random
 
 import torch
 from torch.utils.data import DataLoader
@@ -103,14 +104,21 @@ class Trainer():
             artifact_dir = artifact.download()
             files = os.listdir(artifact_dir)
             for f in files:
-                if args.testset in f:
-                    self.glow.load_state_dict(torch.load(os.path.join(artifact_dir, f)))
+                if args.dataset == "iCLEVR":
+                    if args.testset in f:
+                        self.glow.load_state_dict(torch.load(os.path.join(artifact_dir, f)))
+                elif args.dataset == "CelebAHQ":
+                    if "face" in f:
+                        self.glow.load_state_dict(torch.load(os.path.join(artifact_dir, f)))
 
         if args.test:
             if args.testset == "test":
                 self.evaluate(self.testloader, 0)
             elif args.testset == "new":
                 self.evaluate(self.new_testloader, 0)
+            elif args.dataset == "CelebAHQ":
+                if args.task == 1:
+                    self.face_generation()
         else:
             if args.dataset == "iCLEVR":
                 self.training()
@@ -177,12 +185,12 @@ class Trainer():
                 best_weight_test = copy.deepcopy(self.glow.state_dict())
 
         # save the best model 
-        torch.save(best_weight, os.path.join(self.weight_path, self.file_name + '_new' + '_CNF' + '.pkl'))
-        torch.save(best_weight_test, os.path.join(self.weight_path, self.file_name + '_test' + '_CNF' + '.pkl'))
+        torch.save(best_weight, os.path.join(self.weight_path, self.file_name + '_new' + '.pkl'))
+        torch.save(best_weight_test, os.path.join(self.weight_path, self.file_name + '_test' + '.pkl'))
 
         artifact = wandb.Artifact('model', type='model')
-        artifact.add_file(os.path.join(self.weight_path, self.file_name + '_new' +'_CNF' + '.pkl'))
-        artifact.add_file(os.path.join(self.weight_path, self.file_name + '_test' +'_CNF' + '.pkl'))
+        artifact.add_file(os.path.join(self.weight_path, self.file_name + '_new' + '.pkl'))
+        artifact.add_file(os.path.join(self.weight_path, self.file_name + '_test' + '.pkl'))
         self.run.log_artifact(artifact)
         self.run.join()
 
@@ -230,7 +238,7 @@ class Trainer():
     def generator(self):
 
         best_weight = None
-        best_loss = 10000
+        best_loss = 100000
 
         for e in range(1, self.args.epochs + 1):
 
@@ -274,9 +282,41 @@ class Trainer():
                 best_weight = copy.deepcopy(self.glow.state_dict())
 
         # save the best model 
-        torch.save(best_weight, os.path.join(self.weight_path, self.file_name + 'CNF_face' + '.pkl'))
+        torch.save(best_weight, os.path.join(self.weight_path, self.file_name + '_face' + '.pkl'))
 
         artifact = wandb.Artifact('model', type='model')
-        artifact.add_file(os.path.join(self.weight_path, self.file_name + 'CNF_face' + '.pkl'))
+        artifact.add_file(os.path.join(self.weight_path, self.file_name + '_face' + '.pkl'))
         self.run.log_artifact(artifact)
         self.run.join()
+
+    def face_generation(self):
+
+        self.glow.eval()
+
+        sample = next(iter(self.trainloader))
+        _, label = sample
+
+        print(label.shape)
+
+        z = torch.randn(16, 3, 64, 64).cuda() if self.args.cuda \
+            else torch.randn(16, 3, 64, 64)
+
+        # for i in range(16):
+        #     cond = torch.tensor([1 if random.random() < 0.3 else -1 for _ in range(40)]).view(1, -1)
+        #     label = cond if i == 0 else torch.cat((label, cond), dim=0)
+
+        label = Variable(label)
+                            
+        # using cuda
+        if self.args.cuda:
+            label = label.cuda()
+
+        label = label.float()
+            
+        with torch.no_grad():
+
+            generated_img, _ = self.glow(z, label, reverse=True)
+                
+        grid = make_grid(generated_img, nrow=8, normalize=True)
+        save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_face_generation_result.png"))
+        wandb.log({"generated picture for face": wandb.Image(os.path.join(self.img_path, self.file_name + "_face_generation_result.png"))})
