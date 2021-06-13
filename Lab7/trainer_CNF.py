@@ -119,6 +119,8 @@ class Trainer():
             elif args.dataset == "CelebAHQ":
                 if args.task == 1:
                     self.face_generation()
+                if args.task == 2:
+                    self.interpolation()
         else:
             if args.dataset == "iCLEVR":
                 self.training()
@@ -293,30 +295,74 @@ class Trainer():
 
         self.glow.eval()
 
-        sample = next(iter(self.trainloader))
-        _, label = sample
-
-        print(label.shape)
+        # sample from training dataset 
+        # sample = next(iter(self.trainloader))
+        # _, label = sample
 
         z = torch.randn(16, 3, 64, 64).cuda() if self.args.cuda \
             else torch.randn(16, 3, 64, 64)
 
-        # for i in range(16):
-        #     cond = torch.tensor([1 if random.random() < 0.3 else -1 for _ in range(40)]).view(1, -1)
-        #     label = cond if i == 0 else torch.cat((label, cond), dim=0)
+        # calculate condition
+        for i in range(16):
+            # label[:,i] *= -1 if random.random() < 0.1 else 1
+            cond = torch.tensor([1 if random.random() < 0.35 else -1 for _ in range(40)]).view(1, -1)
+            label = cond if i == 0 else torch.cat((label, cond), dim=0)
 
         label = Variable(label)
                             
         # using cuda
         if self.args.cuda:
             label = label.cuda()
-
-        label = label.float()
             
         with torch.no_grad():
 
-            generated_img, _ = self.glow(z, label, reverse=True)
+            generated_img, _ = self.glow(z, label.float(), reverse=True)
+
+            generated_img = torch.tanh(generated_img)
                 
         grid = make_grid(generated_img, nrow=8, normalize=True)
         save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_face_generation_result.png"))
         wandb.log({"generated picture for face": wandb.Image(os.path.join(self.img_path, self.file_name + "_face_generation_result.png"))})
+
+    def interpolation(self):
+
+        # sample from training dataset 
+        sample = next(iter(self.trainloader))
+        img, con = sample
+
+        img, con = Variable(img), Variable(con)
+                            
+        # using cuda
+        if self.args.cuda:
+            img = img.cuda()
+            con = con.cuda()
+        
+        with torch.no_grad():
+
+            z, _ = self.glow(img[0:4], con[0:4].float(), reverse=False)
+
+            z_a, z_b = z[0:3], z[1:4]
+            z_diff = z_b - z_a
+            
+            for i in range(8):
+                alpha = (1.0 / 7) * i
+                z_c = z_a + alpha * z_diff
+                if i == 0:
+                    generated_img, _ = self.glow(z_c, con[1:4].float(), reverse=True) 
+                else: 
+                    g, _ = self.glow(z_c, con[1:4].float(), reverse=True) 
+                    generated_img = torch.cat((generated_img, g), dim=0)
+
+            t = generated_img.view(8, 3, 3, 64, 64)
+            generated_img = t.permute(1, 0, 2, 3, 4)
+            generated_img = torch.tanh(generated_img.reshape(24, 3, 64, 64))
+
+        grid = make_grid(generated_img, nrow=8, normalize=True)
+        save_image(grid, format="png", fp=os.path.join(self.img_path, self.file_name + "_interpolation_result.png"))
+        wandb.log({"generated picture for interpolation": wandb.Image(os.path.join(self.img_path, self.file_name + "_interpolation_result.png"))})
+
+    def manipulation(self):
+
+
+
+
