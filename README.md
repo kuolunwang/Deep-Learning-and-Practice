@@ -4,6 +4,8 @@ This repo is Lab homework for 2021 Deep Learning and Practice class
 
 teacher : 陳永昇、吳毅成、彭文孝
 
+I use RTX 3060 Ti to inference and torch 1.9.0, cuda 11.1, if you want to use other version, please to edit install.sh.  
+
 ---
 
 ## Lab1
